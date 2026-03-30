@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Budget</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="container header-content">
+            <div class="logo">
+                <i class="fas fa-coins" aria-hidden="true"></i>
+                <h1>My Budget</h1>
+            </div>
+            <div class="toolbar">
+                <button type="button" class="btn" id="themeToggleBtn" aria-label="Переключить тему"><i class="fas fa-moon" aria-hidden="true"></i> Тема</button>
+                <button type="button" class="btn" id="duplicateLastBtn"><i class="fas fa-clone" aria-hidden="true"></i> Дублировать последнюю</button>
+                <button type="button" class="btn btn-primary" id="addTransactionBtn"><i class="fas fa-plus" aria-hidden="true"></i> Добавить</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="tabs card period-bar">
+            <div class="period-bar-inner" style="width:100%;margin-bottom:12px">
+                <div class="field field-grow">
+                    <label for="periodMode">Период</label>
+                    <select id="periodMode" aria-describedby="periodHint">
+                        <option value="month">Месяц</option>
+                        <option value="year">Год</option>
+                        <option value="range">Диапазон дат</option>
+                    </select>
+                </div>
+                <div class="field" id="periodMonthWrap">
+                    <label for="periodMonth">Месяц</label>
+                    <input type="month" id="periodMonth">
+                </div>
+                <div class="field" id="periodYearWrap" hidden>
+                    <label for="periodYear">Год</label>
+                    <input type="number" id="periodYear" min="2000" max="2100" step="1">
+                </div>
+                <div class="field field-grow" id="periodRangeWrap" hidden style="flex:2;min-width:220px">
+                    <span class="sr-only">Диапазон</span>
+                    <div class="table-tools" style="margin:0">
+                        <div class="field" style="flex:1;min-width:120px">
+                            <label for="periodFrom">С даты</label>
+                            <input type="date" id="periodFrom">
+                        </div>
+                        <div class="field" style="flex:1;min-width:120px">
+                            <label for="periodTo">По дату</label>
+                            <input type="date" id="periodTo">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="period-hint" id="periodHint">Сводка, графики обзора и аналитики считаются по выбранному периоду.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px" role="tablist" aria-label="Разделы приложения">
+                <button type="button" class="tab-btn active" role="tab" id="tab-overview" aria-selected="true" aria-controls="overview" data-tab="overview">Обзор</button>
+                <button type="button" class="tab-btn" role="tab" id="tab-analytics" aria-selected="false" aria-controls="analytics" data-tab="analytics" tabindex="-1">Аналитика</button>
+                <button type="button" class="tab-btn" role="tab" id="tab-operations" aria-selected="false" aria-controls="operations" data-tab="operations" tabindex="-1">Операции</button>
+                <button type="button" class="tab-btn" role="tab" id="tab-settings" aria-selected="false" aria-controls="settings" data-tab="settings" tabindex="-1">Настройки</button>
+            </div>
+        </div>
+
+        <section class="tab-content active" id="overview" role="tabpanel" aria-labelledby="tab-overview">
+            <div class="summary-grid">
+                <article class="card">
+                    <div class="summary-card-content">
+                        <div class="summary-info">
+                            <p>Баланс (период)</p>
+                            <h3 class="balance-amount" id="balanceAmount">0 ₽</h3>
+                        </div>
+                        <div class="summary-icon"><i class="fas fa-wallet" aria-hidden="true"></i></div>
+                    </div>
+                </article>
+                <article class="card">
+                    <div class="summary-card-content">
+                        <div class="summary-info">
+                            <p>Доходы</p>
+                            <h3 class="income-amount" id="incomeAmount">0 ₽</h3>
+                        </div>
+                        <div class="summary-icon"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></div>
+                    </div>
+                </article>
+                <article class="card">
+                    <div class="summary-card-content">
+                        <div class="summary-info">
+                            <p>Расходы</p>
+                            <h3 class="expense-amount" id="expenseAmount">0 ₽</h3>
+                        </div>
+                        <div class="summary-icon"><i class="fas fa-arrow-trend-down" aria-hidden="true"></i></div>
+                    </div>
+                </article>
+            </div>
+
+            <div class="overview-layout">
+                <article class="card chart-card">
+                    <h3 class="chart-title">Расходы по категориям</h3>
+                    <div class="chart-container"><canvas id="categoryChart" aria-label="Диаграмма расходов"></canvas></div>
+                </article>
+                <article class="card">
+                    <h3 class="chart-title">Сводка за период</h3>
+                    <ul class="quick-list" id="quickMonthList"></ul>
+                </article>
+            </div>
+
+            <article class="card budget-panel" style="margin-top:12px">
+                <h3 class="chart-title">Лимиты по категориям (календарный месяц)</h3>
+                <p class="period-hint" style="margin-top:0">Задаются в «Настройках». При режиме периода «Месяц» месяц лимитов совпадает с выбранным.</p>
+                <div class="field" style="max-width:200px;margin-bottom:12px">
+                    <label for="budgetMonth">Месяц лимитов</label>
+                    <input type="month" id="budgetMonth">
+                </div>
+                <div class="budget-rows" id="budgetPanelRows"></div>
+            </article>
+        </section>
+
+        <section class="tab-content" id="analytics" role="tabpanel" aria-labelledby="tab-analytics" hidden>
+            <div class="analytics-layout">
+                <article class="card chart-card">
+                    <h3 class="chart-title">Динамика доходов и расходов</h3>
+                    <div class="chart-container"><canvas id="yearlyTrendChart" aria-label="Линейный график"></canvas></div>
+                </article>
+                <article class="card chart-card">
+                    <h3 class="chart-title">Доход и расход за период</h3>
+                    <div class="chart-container"><canvas id="compareChart" aria-label="Сравнение сумм"></canvas></div>
+                </article>
+            </div>
+            <div class="analytics-row2">
+                <article class="card chart-card">
+                    <h3 class="chart-title">Расходы по дням недели</h3>
+                    <div class="chart-container"><canvas id="weekdayChart" aria-label="График по дням недели"></canvas></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="tab-content" id="operations" role="tabpanel" aria-labelledby="tab-operations" hidden>
+            <article class="card">
+                <h3 class="chart-title">Все операции</h3>
+                <div class="table-tools">
+                    <select id="filterType" aria-label="Фильтр по типу">
+                        <option value="all">Все</option>
+                        <option value="income">Доходы</option>
+                        <option value="expense">Расходы</option>
+                    </select>
+                    <select id="filterCategory" aria-label="Категория">
+                        <option value="all">Все категории</option>
+                        <option value="salary">Зарплата</option>
+                        <option value="freelance">Фриланс</option>
+                        <option value="investments">Инвестиции</option>
+                        <option value="groceries">Продукты</option>
+                        <option value="transport">Транспорт</option>
+                        <option value="entertainment">Развлечения</option>
+                        <option value="utilities">Коммунальные</option>
+                        <option value="other">Другое</option>
+                    </select>
+                    <input id="searchInput" type="search" placeholder="Поиск по описанию..." aria-label="Поиск по описанию">
+                    <input type="date" id="filterDateFrom" aria-label="Дата с">
+                    <input type="date" id="filterDateTo" aria-label="Дата по">
+                    <select id="sortBy" aria-label="Сортировка">
+                        <option value="dateDesc">Сначала новые</option>
+                        <option value="dateAsc">Сначала старые</option>
+                        <option value="amountDesc">Сумма по убыванию</option>
+                        <option value="amountAsc">Сумма по возрастанию</option>
+                    </select>
+                </div>
+                <ul class="transactions-list" id="transactionsList"></ul>
+            </article>
+        </section>
+
+        <section class="tab-content" id="settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+            <div class="settings-grid">
+                <article class="card">
+                    <h3 class="chart-title">Резервные копии</h3>
+                    <p class="period-hint" style="margin-top:0">Экспорт обновляет напоминание о резервной копии.</p>
+                    <div class="table-tools">
+                        <button type="button" class="btn" id="exportBtn"><i class="fas fa-download" aria-hidden="true"></i> Экспорт JSON</button>
+                        <button type="button" class="btn" id="exportCsvBtn"><i class="fas fa-file-csv" aria-hidden="true"></i> Экспорт CSV</button>
+                        <button type="button" class="btn" id="copyJsonBtn"><i class="fas fa-copy" aria-hidden="true"></i> Копировать JSON</button>
+                        <button type="button" class="btn" id="importBtn"><i class="fas fa-upload" aria-hidden="true"></i> Импорт JSON</button>
+                        <input type="file" id="importInput" accept=".json,application/json" hidden>
+                    </div>
+                </article>
+                <article class="card">
+                    <h3 class="chart-title">Лимиты расходов по месяцам</h3>
+                    <p class="period-hint" style="margin-top:0">Ноль или пусто — лимит не задан. Сохраняются вместе с данными.</p>
+                    <div class="field" style="max-width:220px;margin-bottom:10px">
+                        <label for="settingsBudgetMonth">Месяц</label>
+                        <input type="month" id="settingsBudgetMonth">
+                    </div>
+                    <div class="budget-settings-grid" id="budgetSettingsFields"></div>
+                    <div class="table-tools" style="margin-top:12px">
+                        <button type="button" class="btn btn-primary" id="saveBudgetsBtn">Сохранить лимиты</button>
+                    </div>
+                </article>
+                <article class="card">
+                    <h3 class="chart-title">Опасная зона</h3>
+                    <button type="button" class="btn btn-danger-outline" id="clearAllBtn"><i class="fas fa-trash" aria-hidden="true"></i> Удалить все операции</button>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">© 2026 My Budget</div>
+    </footer>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <div class="modal-overlay" id="transactionModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Добавить операцию</h3>
+                <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Закрыть"><i class="fas fa-times" aria-hidden="true"></i></button>
+            </div>
+            <form id="transactionForm">
+                <div class="form-group">
+                    <label>Тип операции</label>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="transactionType" value="income" checked> Доход</label>
+                        <label class="radio-option"><input type="radio" name="transactionType" value="expense"> Расход</label>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="amount">Сумма (₽)</label>
+                        <input type="number" id="amount" placeholder="0.00" required min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Дата</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Категория</label>
+                        <select id="category" required></select>
+                    </div>
+                    <div class="form-group full">
+                        <label for="description">Описание</label>
+                        <input type="text" id="description" placeholder="Например: покупка продуктов">
+                    </div>
+                </div>
+                <div class="table-tools">
+                    <button type="button" class="btn" id="formCancelBtn">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="modal modal--narrow">
+            <div class="modal-header">
+                <h3 class="modal-title" id="confirmTitle">Подтверждение</h3>
+            </div>
+            <div class="modal-body" id="confirmMessage"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn" id="confirmCancelBtn">Отмена</button>
+                <button type="button" class="btn btn-primary" id="confirmOkBtn">ОК</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="importTitle">Импорт данных</h3>
+                <button type="button" class="modal-close" id="importCloseBtn" aria-label="Закрыть"><i class="fas fa-times" aria-hidden="true"></i></button>
+            </div>
+            <p class="modal-body" id="importStats"></p>
+            <div class="import-options" role="radiogroup" aria-label="Режим импорта">
+                <label class="radio-option"><input type="radio" name="importMode" value="replace"> Заменить все данные</label>
+                <label class="radio-option"><input type="radio" name="importMode" value="merge" checked> Добавить (пропускать записи с тем же id)</label>
+                <label class="radio-option"><input type="radio" name="importMode" value="abort"> Отменить при любом совпадении id</label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" id="importCancelBtn">Отмена</button>
+                <button type="button" class="btn btn-primary" id="importConfirmBtn">Импортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js" defer></script>
+</body>
+
+</html>
